@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🌽 Clicker-Spiel mit Forschung, Handel & Steinbruch 🌽</title>
+  <style>
+    /* =========================
+       Grundlegendes Layout
+       ========================= */
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      overflow-y: hidden; /* Verhindert Scrollen */
+    }
+    .container {
+      display: none;
+      padding: 20px;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    .container.active {
+      display: block;
+    }
+
+    /* =========================
+       1) Alle Buttons (groß)
+       ========================= */
+    button {
+      display: block;
+      width: 80%;
+      max-width: 400px;
+      padding: 15px;
+      margin: 10px auto;
+      font-size: 18px;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      background-color: #28a745;
+    }
+    button:disabled {
+      background-color: gray !important;
+      cursor: not-allowed;
+    }
+
+    /* =========================
+       2) Hauptmenü-Buttons (klein)
+       ========================= */
+    #menu {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    #menu button {
+      display: inline-block;
+      width: auto;
+      max-width: none;
+      padding: 10px;
+      margin: 5px;
+      font-size: 16px;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      background-color: #28a745;
+    }
+
+    /* =========================
+       Weitere gemeinsame Styles
+       ========================= */
+    .game-container {
+      margin-top: 20px;
+      position: relative;
+    }
+    .block {
+      width: 150px;
+      height: 150px;
+      border-radius: 20px;
+      border: 3px solid black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: auto;
+      touch-action: manipulation;
+      transition: transform 0.1s;
+      position: relative;
+    }
+    .block:active {
+      transform: scale(0.95);
+    }
+    .score-container {
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .stats {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+    .research-progress {
+      font-size: 14px;
+      color: red;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🌽 Clicker-Spiel 🌽</h1>
+
+  <!-- Hauptmenü (kleine Buttons) -->
+  <div id="menu">
+    <!-- Mais-Menü -->
+    <button id="btnShowGame">Mais-Spiel</button>
+    <button id="btnShowTrade">Mais-Handel</button>
+    <button id="btnShowShop">Mais-Shop</button>
+
+    <!-- Stein-Menü -->
+    <button id="btnShowStoneGame" disabled>Stein-Spiel</button>
+    <button id="btnShowStoneBaustoff" disabled>Stein → Baustoff</button>
+    <button id="btnShowStoneShop" disabled>Stein-Shop</button>
+  </div>
+
+  <!-- =======================
+       1) MAIS-SEITEN
+       ======================= -->
+
+  <!-- SPIEL-SEITE (Mais) -->
+  <div id="game" class="container active">
+    <div class="score-container">
+      Mais: <span id="score">0</span> | Gold: <span id="gold">0</span>
+    </div>
+    <div class="stats">
+      Mais Ernte pro Klick: <span id="pointsPerClick">1</span> | 
+      Nachwachs-Zeit: <span id="respawnTime">1.0</span> Sekunden
+    </div>
+    <div class="game-container">
+      <div id="block" class="block" style="background-color: yellow;">🌽</div>
+    </div>
+
+    <h2>Forschung (Mais)</h2>
+    <button id="btnUpgradeDoublePoints">
+      Verdopplung Mais Ernte (Kosten: <span id="costDoublePoints">10</span> Mais)
+    </button>
+    <div class="research-progress" id="progressDoublePoints"></div>
+    <div id="levelDoublePoints">Level: 0</div>
+
+    <button id="btnUpgradeFasterRespawn">
+      Schnelleres Nachwachsen (Kosten: <span id="costFasterRespawn">15</span> Mais)
+    </button>
+    <div class="research-progress" id="progressFasterRespawn"></div>
+    <div id="levelFasterRespawn">Level: 0</div>
+
+    <button id="btnUseFertilizer" disabled>Speziellen Dünger einsetzen</button>
+    <div id="fertilizer-count">
+      Spezieller Dünger: <span id="fertilizerAmount">0</span>
+    </div>
+
+    <button id="btnResetGame">Spiel zurücksetzen</button>
+    <!-- Test-Button: +5000 Gold -->
+    <button id="btnTestAddGold">Test: +5000 Gold</button>
+  </div>
+
+  <!-- HANDEL-SEITE (Mais) -->
+  <div id="trade" class="container">
+    <div class="score-container">
+      Mais: <span id="score">0</span> | Gold: <span id="gold">0</span>
+    </div>
+    <h2>Mais-Handel</h2>
+    <p>250 Mais = 1 Gold</p>
+    <button id="btnTradeCorn250">250 Mais tauschen</button>
+    <button id="btnTradeCorn500">500 Mais tauschen</button>
+    <button id="btnTradeCorn1000">1000 Mais tauschen</button>
+  </div>
+
+  <!-- SHOP-SEITE (Mais) -->
+  <div id="shop" class="container">
+    <div class="score-container">
+      Mais: <span id="score">0</span> | Gold: <span id="gold">0</span>
+    </div>
+    <h2>Mais-Shop</h2>
+    <p>Hier kannst du Werkzeuge und Upgrades für Mais kaufen.</p>
+    <button id="btnBuyCornPicker">
+      Maispflücker (Kosten: 5 Gold, +1 Punkt/Klick)
+    </button>
+    <button id="btnBuyTimeMachine">
+      Zeitmaschine (Kosten: 10 Gold, -0.05s Nachwachs-Zeit)
+    </button>
+    <button id="btnBuyCornFarm">
+      Kleine Mais-Farm (Kosten: 50 Gold, +5 Mais/Sek)
+    </button>
+    <div id="cornFarmLevelDisplay">Kleine Maisfarm Level: 0</div>
+    <button id="btnBuyFertilizer">
+      Spezieller Dünger (Kosten: 17 Gold, Doppelte Mais-Erträge für 1 Min)
+    </button>
+  </div>
+
+  <!-- =======================
+       2) STEIN-SEITEN
+       ======================= -->
+
+  <!-- SPIEL-SEITE (Stein) -->
+  <div id="stoneGame" class="container">
+    <div class="score-container">
+      Stein: <span id="stoneScore">0</span> | Gold: <span id="gold">0</span> | Baustoff: <span id="baustoff">0</span>
+    </div>
+    <div class="stats">
+      Stein Ernte pro Klick: <span id="stonePointsPerClick">1</span> | 
+      Nachwachs-Zeit: <span id="stoneRespawnTime">1.0</span> Sekunden
+    </div>
+    <div class="game-container">
+      <div id="stoneBlock" class="block" style="background-color: #ccc;">🪨</div>
+    </div>
+
+    <h2>Forschung (Stein)</h2>
+    <button id="btnUpgradeStoneDouble">
+      Verdopplung Stein Ernte (Kosten: <span id="costStoneDouble">10</span> Stein)
+    </button>
+    <div class="research-progress" id="progressStoneDouble"></div>
+    <div id="levelStoneDouble">Level: 0</div>
+
+    <button id="btnUpgradeStoneFaster">
+      Schnelleres Nachwachsen (Kosten: <span id="costStoneFaster">15</span> Stein)
+    </button>
+    <div class="research-progress" id="progressStoneFaster"></div>
+    <div id="levelStoneFaster">Level: 0</div>
+  </div>
+
+  <!-- BAUSTOFF-SEITE (Stein) -->
+  <div id="stoneBaustoff" class="container">
+    <div class="score-container">
+      Stein: <span id="stoneScore">0</span> | Baustoff: <span id="baustoff">0</span>
+    </div>
+    <h2>Stein → Baustoff</h2>
+    <p>100 Stein = 1 Baustoff</p>
+    <button id="btnTradeStone100">100 Stein tauschen</button>
+    <button id="btnTradeStone500">500 Stein tauschen</button>
+    <button id="btnTradeStone1000">1000 Stein tauschen</button>
+  </div>
+
+  <!-- SHOP-SEITE (Stein) -->
+  <div id="stoneShop" class="container">
+    <div class="score-container">
+      Stein: <span id="stoneScore">0</span> | Gold: <span id="gold">0</span> | Baustoff: <span id="baustoff">0</span>
+    </div>
+    <h2>Stein-Shop</h2>
+    <p>Hier kannst du Werkzeuge und Upgrades für Stein kaufen.</p>
+    <button id="btnBuyExcavator">
+      Bagger (Kosten: 1500 Gold, Stein-Block freischalten)
+    </button>
+    <button id="btnBuyStonePicker">
+      Steinschläger (Kosten: 5 Gold, +1 Stein/Klick)
+    </button>
+    <button id="btnBuyStoneMachine">
+      Steinmaschine (Kosten: 10 Gold, -0.05s Nachwachs-Zeit)
+    </button>
+  </div>
+
+  <script>
+    (function() {
+      /* ======================
+         VARIABLEN (Mais)
+         ====================== */
+      let score = 0;            // Mais
+      let gold = 0;             // Gemeinsame Währung
+      let pointsPerClick = 1;   // Mais pro Klick
+      let respawnTime = 1000;   // Nachwachs-Zeit (Mais)
+      let farms = 0;            // Mais-Farmen
+      let fertilizerCount = 0;  // Dünger
+
+      // Forschung (Mais)
+      const upgrades = {
+        doublePoints: {
+          cost: 10,
+          researchTime: 5000,
+          effect: () => { pointsPerClick *= 2; },
+          level: 0
+        },
+        fasterRespawn: {
+          cost: 15,
+          researchTime: 5000,
+          effect: () => { respawnTime = Math.max(100, respawnTime * 0.9); },
+          level: 0
+        }
+      };
+      const isResearching = {};
+      let autoFarmInterval;
+
+      const tools = {
+        cornPicker: {
+          cost: 5,
+          effect: () => { pointsPerClick += 1; }
+        },
+        timeMachine: {
+          cost: 10,
+          effect: () => { respawnTime = Math.max(100, respawnTime - 50); }
+        }
+      };
+      const farmTypes = {
+        cornFarm: {
+          cost: 50,
+          effect: () => { farms += 1; },
+          rate: 5
+        }
+      };
+
+      // Dünger (Mais)
+      let fertilizerActive = false;
+      let fertilizerExpiry = 0;
+      let originalPointsBeforeFertilizer = 0;
+      let fertilizerTimerInterval = null;
+
+      /* ======================
+         VARIABLEN (Stein)
+         ====================== */
+      let stoneScore = 0;            // Stein
+      let stonePointsPerClick = 1;   // Stein pro Klick
+      let stoneRespawnTime = 1000;   // Nachwachs-Zeit (Stein)
+      let hasExcavator = false;      // Bagger gekauft?
+      let stoneUnlocked = false;     // Ab 1000 Gold
+
+      // Forschung (Stein)
+      const stoneUpgrades = {
+        doubleStone: {
+          cost: 10,
+          researchTime: 5000,
+          effect: () => { stonePointsPerClick *= 2; },
+          level: 0
+        },
+        fasterStoneRespawn: {
+          cost: 15,
+          researchTime: 5000,
+          effect: () => { stoneRespawnTime = Math.max(100, stoneRespawnTime * 0.9); },
+          level: 0
+        }
+      };
+
+      // Baustoff
+      let baustoff = 0;  // Neuer Rohstoff aus Stein
+
+      /* ======================
+         HILFSFUNKTIONEN
+         ====================== */
+      function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      }
+      function formatTime(seconds) {
+        if (seconds < 0) return "0 Sek";
+        if (seconds < 60) return `${Math.round(seconds)} Sek`;
+        const min = Math.floor(seconds / 60);
+        const sec = Math.round(seconds % 60);
+        return `${min}:${sec < 10 ? '0' : ''}${sec} Min`;
+      }
+
+      /* ======================
+         SPIEL-FUNKTIONEN (Mais)
+         ====================== */
+      function mineBlock(e) {
+        if (e) e.preventDefault();
+        const blockEl = document.getElementById("block");
+        if (blockEl.style.pointerEvents !== "none") {
+          score += pointsPerClick;
+          updateUI();
+          blockEl.style.pointerEvents = "none";
+          setTimeout(() => {
+            blockEl.style.pointerEvents = "auto";
+          }, respawnTime);
+        }
+      }
+      function tradeCornForGold(amount) {
+        if (score >= amount) {
+          score -= amount;
+          gold += Math.floor(amount / 250); // 250 Mais = 1 Gold
+          updateUI();
+        }
+      }
+      function buyTool(type) {
+        const tool = tools[type];
+        if (gold >= tool.cost && typeof tool.effect === "function") {
+          gold -= tool.cost;
+          tool.effect();
+          updateUI();
+        }
+      }
+      function buyFarm(type) {
+        const farm = farmTypes[type];
+        if (gold >= farm.cost && typeof farm.effect === "function") {
+          gold -= farm.cost;
+          farm.effect();
+          startAutoFarm();
+          updateUI();
+        }
+      }
+      function buyFertilizer() {
+        if (gold >= 17) {
+          gold -= 17;
+          fertilizerCount++;
+          updateUI();
+        }
+      }
+      function useFertilizer() {
+        if (fertilizerActive) return;
+        if (fertilizerCount > 0) {
+          fertilizerCount--;
+          originalPointsBeforeFertilizer = pointsPerClick;
+          pointsPerClick *= 2;
+          fertilizerActive = true;
+          fertilizerExpiry = Date.now() + 60000; // 1 Minute
+          updateUI();
+          fertilizerTimerInterval = setInterval(updateFertilizerTimer, 1000);
+          setTimeout(() => {
+            fertilizerActive = false;
+            pointsPerClick = originalPointsBeforeFertilizer;
+            fertilizerExpiry = 0;
+            clearInterval(fertilizerTimerInterval);
+            fertilizerTimerInterval = null;
+            document.getElementById("fertilizerTimerDisplay").innerText = "";
+            updateUI();
+          }, 60000);
+        }
+      }
+      function updateFertilizerTimer() {
+        if (!fertilizerActive) {
+          document.getElementById("fertilizerTimerDisplay").innerText = "";
+          return;
+        }
+        const remainingMs = fertilizerExpiry - Date.now();
+        const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+        document.getElementById("fertilizerTimerDisplay").innerText = "Dünger aktiv: " + remainingSec + " Sek";
+      }
+      function startResearch(type) {
+        if (isResearching[type]) return;
+        const upgrade = upgrades[type];
+        if (score >= upgrade.cost && typeof upgrade.effect === "function") {
+          isResearching[type] = true;
+          score -= upgrade.cost;
+          updateUI();
+
+          let remainingTime = upgrade.researchTime / 1000;
+          const progressElem = document.getElementById(`progress${capitalize(type)}`);
+          const countdown = setInterval(() => {
+            remainingTime -= 1;
+            if (remainingTime <= 0) {
+              clearInterval(countdown);
+              progressElem.innerText = "Forschung abgeschlossen!";
+              upgrade.effect();
+              upgrade.level = (upgrade.level || 0) + 1;
+              upgrade.cost = Math.floor(upgrade.cost * 2.5);
+              upgrade.researchTime = Math.floor(upgrade.researchTime * 2.0);
+              isResearching[type] = false;
+              updateUI();
+            } else {
+              progressElem.innerText = `Forschung läuft... (${formatTime(remainingTime)})`;
+            }
+          }, 1000);
+        }
+      }
+      function startAutoFarm() {
+        clearInterval(autoFarmInterval);
+        autoFarmInterval = setInterval(() => {
+          if (farms > 0) {
+            score += farms * farmTypes.cornFarm.rate;
+            updateUI();
+          }
+        }, 1000);
+      }
+
+      /* ======================
+         SPIEL-FUNKTIONEN (Stein)
+         ====================== */
+      function mineStoneBlock(e) {
+        if (e) e.preventDefault();
+        const blockEl = document.getElementById("stoneBlock");
+        // Steinblock nur anklickbar, wenn Bagger gekauft
+        if (!hasExcavator) return;
+        if (blockEl.style.pointerEvents !== "none") {
+          stoneScore += stonePointsPerClick;
+          updateUI();
+          blockEl.style.pointerEvents = "none";
+          setTimeout(() => {
+            blockEl.style.pointerEvents = "auto";
+          }, stoneRespawnTime);
+        }
+      }
+
+      // Stein-Forschung
+      function startStoneResearch(type) {
+        const upgrade = stoneUpgrades[type];
+        if (!upgrade) return;
+        // Kosten in Stein
+        if (stoneScore >= upgrade.cost) {
+          stoneScore -= upgrade.cost;
+          updateUI();
+
+          let remainingTime = upgrade.researchTime / 1000;
+          let progressElem;
+          if (type === "doubleStone") {
+            progressElem = document.getElementById("progressStoneDouble");
+          } else {
+            progressElem = document.getElementById("progressStoneFaster");
+          }
+          progressElem.innerText = "Forschung läuft...";
+          const countdown = setInterval(() => {
+            remainingTime -= 1;
+            if (remainingTime <= 0) {
+              clearInterval(countdown);
+              progressElem.innerText = "Forschung abgeschlossen!";
+              upgrade.effect();
+              upgrade.level = (upgrade.level || 0) + 1;
+              upgrade.cost = Math.floor(upgrade.cost * 2.5);
+              upgrade.researchTime = Math.floor(upgrade.researchTime * 2.0);
+              updateUI();
+            } else {
+              progressElem.innerText = `Forschung läuft... (${formatTime(remainingTime)})`;
+            }
+          }, 1000);
+        }
+      }
+
+      // Stein → Baustoff (100 Stein = 1 Baustoff)
+      function tradeStoneForBaustoff(amount) {
+        if (stoneScore >= amount) {
+          stoneScore -= amount;
+          baustoff += Math.floor(amount / 100); 
+          updateUI();
+        }
+      }
+
+      // Stein-Shop
+      function buyExcavator() {
+        if (!hasExcavator && gold >= 1500) {
+          gold -= 1500;
+          hasExcavator = true;
+          updateUI();
+        }
+      }
+      function buyStonePicker() {
+        if (gold >= 5) {
+          gold -= 5;
+          stonePointsPerClick += 1;
+          updateUI();
+        }
+      }
+      function buyStoneMachine() {
+        if (gold >= 10) {
+          gold -= 10;
+          stoneRespawnTime = Math.max(100, stoneRespawnTime - 50);
+          updateUI();
+        }
+      }
+
+      /* ======================
+         UI-AKTUALISIERUNG
+         ====================== */
+      function updateUI() {
+        // ============= Mais =============
+        document.querySelectorAll("#score").forEach(el => el.innerText = score);
+        document.querySelectorAll("#gold").forEach(el => el.innerText = gold);
+        document.getElementById("pointsPerClick").innerText = pointsPerClick;
+        document.getElementById("respawnTime").innerText = (respawnTime / 1000).toFixed(2);
+        document.getElementById("fertilizerAmount").innerText = fertilizerCount;
+        document.getElementById("btnUseFertilizer").disabled = (fertilizerCount === 0);
+
+        // Forschung (Mais)
+        document.getElementById("btnUpgradeDoublePoints").disabled = (score < upgrades.doublePoints.cost);
+        document.getElementById("costDoublePoints").innerText = upgrades.doublePoints.cost;
+        document.getElementById("btnUpgradeFasterRespawn").disabled = (score < upgrades.fasterRespawn.cost);
+        document.getElementById("costFasterRespawn").innerText = upgrades.fasterRespawn.cost;
+        document.getElementById("levelDoublePoints").innerText = "Level: " + (upgrades.doublePoints.level || 0);
+        document.getElementById("levelFasterRespawn").innerText = "Level: " + (upgrades.fasterRespawn.level || 0);
+
+        // Handel (Mais)
+        document.getElementById("btnTradeCorn250").disabled = (score < 250);
+        document.getElementById("btnTradeCorn500").disabled = (score < 500);
+        document.getElementById("btnTradeCorn1000").disabled = (score < 1000);
+
+        // Shop (Mais)
+        document.getElementById("btnBuyCornPicker").disabled = (gold < tools.cornPicker.cost);
+        document.getElementById("btnBuyTimeMachine").disabled = (gold < tools.timeMachine.cost);
+        document.getElementById("btnBuyCornFarm").disabled = (gold < farmTypes.cornFarm.cost);
+        document.getElementById("btnBuyFertilizer").disabled = (gold < 17);
+        document.getElementById("cornFarmLevelDisplay").innerText = "Kleine Maisfarm Level: " + farms;
+
+        // Ab wann Stein freischalten?
+        if (!stoneUnlocked && gold >= 1000) {
+          stoneUnlocked = true;
+        }
+        document.getElementById("btnShowStoneGame").disabled = !stoneUnlocked;
+        document.getElementById("btnShowStoneBaustoff").disabled = !stoneUnlocked;
+        document.getElementById("btnShowStoneShop").disabled = !stoneUnlocked;
+
+        // ============= Stein =============
+        document.getElementById("stoneScore").innerText = stoneScore;
+        document.getElementById("stonePointsPerClick").innerText = stonePointsPerClick;
+        document.getElementById("stoneRespawnTime").innerText = (stoneRespawnTime / 1000).toFixed(2);
+
+        // Forschung (Stein)
+        document.getElementById("btnUpgradeStoneDouble").disabled = (stoneScore < stoneUpgrades.doubleStone.cost);
+        document.getElementById("costStoneDouble").innerText = stoneUpgrades.doubleStone.cost;
+        document.getElementById("levelStoneDouble").innerText = "Level: " + (stoneUpgrades.doubleStone.level || 0);
+
+        document.getElementById("btnUpgradeStoneFaster").disabled = (stoneScore < stoneUpgrades.fasterStoneRespawn.cost);
+        document.getElementById("costStoneFaster").innerText = stoneUpgrades.fasterStoneRespawn.cost;
+        document.getElementById("levelStoneFaster").innerText = "Level: " + (stoneUpgrades.fasterStoneRespawn.level || 0);
+
+        // Baustoff
+        document.getElementById("baustoff").innerText = baustoff;
+
+        // Stein -> Baustoff
+        document.getElementById("btnTradeStone100").disabled = (stoneScore < 100);
+        document.getElementById("btnTradeStone500").disabled = (stoneScore < 500);
+        document.getElementById("btnTradeStone1000").disabled = (stoneScore < 1000);
+
+        // Stein-Shop
+        document.getElementById("btnBuyExcavator").disabled = (hasExcavator || gold < 1500);
+        document.getElementById("btnBuyStonePicker").disabled = (gold < 5);
+        document.getElementById("btnBuyStoneMachine").disabled = (gold < 10);
+      }
+
+      /* ======================
+         SEITENWECHSEL
+         ====================== */
+      function showPage(pageId) {
+        document.querySelectorAll(".container").forEach(el => el.classList.remove("active"));
+        document.getElementById(pageId).classList.add("active");
+        updateUI();
+      }
+
+      /* ======================
+         SPEICHERN & LADEN
+         ====================== */
+      function saveGame() {
+        const gameState = {
+          // Mais
+          score,
+          gold,
+          pointsPerClick,
+          respawnTime,
+          farms,
+          fertilizerCount,
+          upgrades,
+          // Stein
+          stoneScore,
+          stonePointsPerClick,
+          stoneRespawnTime,
+          hasExcavator,
+          stoneUnlocked,
+          stoneUpgrades,
+          // Baustoff
+          baustoff
+        };
+        localStorage.setItem("gameState", JSON.stringify(gameState));
+      }
+      function loadGame() {
+        const saved = JSON.parse(localStorage.getItem("gameState"));
+        if (!saved) {
+          // Kein gespeicherter Spielstand → Start mit 5000 Gold
+          gold = 5000;
+        } else {
+          score = saved.score || 0;
+          gold = saved.gold || 5000;
+          pointsPerClick = saved.pointsPerClick || 1;
+          respawnTime = saved.respawnTime || 1000;
+          farms = saved.farms || 0;
+          fertilizerCount = saved.fertilizerCount || 0;
+          // Upgrades (Mais)
+          if (saved.upgrades) {
+            upgrades.doublePoints = saved.upgrades.doublePoints || upgrades.doublePoints;
+            upgrades.fasterRespawn = saved.upgrades.fasterRespawn || upgrades.fasterRespawn;
+          }
+          // Stein
+          stoneScore = saved.stoneScore || 0;
+          stonePointsPerClick = saved.stonePointsPerClick || 1;
+          stoneRespawnTime = saved.stoneRespawnTime || 1000;
+          hasExcavator = saved.hasExcavator || false;
+          stoneUnlocked = saved.stoneUnlocked || false;
+          // Stein-Forschung
+          if (saved.stoneUpgrades) {
+            stoneUpgrades.doubleStone = saved.stoneUpgrades.doubleStone || stoneUpgrades.doubleStone;
+            stoneUpgrades.fasterStoneRespawn = saved.stoneUpgrades.fasterStoneRespawn || stoneUpgrades.fasterStoneRespawn;
+          }
+          // Baustoff
+          baustoff = saved.baustoff || 0;
+        }
+        updateUI();
+        startAutoFarm();
+      }
+
+      /* ======================
+         SPIEL ZURÜCKSETZEN
+         ====================== */
+      function resetGame() {
+        localStorage.removeItem("gameState");
+        // Mais
+        score = 0;
+        gold = 0;
+        pointsPerClick = 1;
+        respawnTime = 1000;
+        farms = 0;
+        fertilizerCount = 0;
+        upgrades.doublePoints = {
+          cost: 10,
+          researchTime: 5000,
+          effect: () => { pointsPerClick *= 2; },
+          level: 0
+        };
+        upgrades.fasterRespawn = {
+          cost: 15,
+          researchTime: 5000,
+          effect: () => { respawnTime = Math.max(100, respawnTime * 0.9); },
+          level: 0
+        };
+
+        // Stein
+        stoneScore = 0;
+        stonePointsPerClick = 1;
+        stoneRespawnTime = 1000;
+        hasExcavator = false;
+        stoneUnlocked = false;
+        stoneUpgrades.doubleStone = {
+          cost: 10,
+          researchTime: 5000,
+          effect: () => { stonePointsPerClick *= 2; },
+          level: 0
+        };
+        stoneUpgrades.fasterStoneRespawn = {
+          cost: 15,
+          researchTime: 5000,
+          effect: () => { stoneRespawnTime = Math.max(100, stoneRespawnTime * 0.9); },
+          level: 0
+        };
+
+        // Baustoff
+        baustoff = 0;
+
+        clearInterval(autoFarmInterval);
+        updateUI();
+      }
+
+      /* ======================
+         EVENT-LISTENER
+         ====================== */
+      window.addEventListener("load", () => {
+        // Hauptmenü (Mais)
+        document.getElementById("btnShowGame").addEventListener("click", () => showPage("game"));
+        document.getElementById("btnShowTrade").addEventListener("click", () => showPage("trade"));
+        document.getElementById("btnShowShop").addEventListener("click", () => showPage("shop"));
+
+        // Hauptmenü (Stein)
+        document.getElementById("btnShowStoneGame").addEventListener("click", () => showPage("stoneGame"));
+        document.getElementById("btnShowStoneBaustoff").addEventListener("click", () => showPage("stoneBaustoff"));
+        document.getElementById("btnShowStoneShop").addEventListener("click", () => showPage("stoneShop"));
+
+        // Mais-Spiel
+        document.getElementById("block").addEventListener("click", mineBlock);
+        document.getElementById("btnUpgradeDoublePoints").addEventListener("click", () => startResearch("doublePoints"));
+        document.getElementById("btnUpgradeFasterRespawn").addEventListener("click", () => startResearch("fasterRespawn"));
+        document.getElementById("btnUseFertilizer").addEventListener("click", useFertilizer);
+
+        // Test-Button: +5000 Gold
+        document.getElementById("btnTestAddGold").addEventListener("click", () => {
+          gold += 5000;
+          updateUI();
+        });
+
+        // Spiel zurücksetzen
+        document.getElementById("btnResetGame").addEventListener("click", resetGame);
+
+        // Mais-Handel
+        document.getElementById("btnTradeCorn250").addEventListener("click", () => tradeCornForGold(250));
+        document.getElementById("btnTradeCorn500").addEventListener("click", () => tradeCornForGold(500));
+        document.getElementById("btnTradeCorn1000").addEventListener("click", () => tradeCornForGold(1000));
+
+        // Mais-Shop
+        document.getElementById("btnBuyCornPicker").addEventListener("click", () => buyTool("cornPicker"));
+        document.getElementById("btnBuyTimeMachine").addEventListener("click", () => buyTool("timeMachine"));
+        document.getElementById("btnBuyCornFarm").addEventListener("click", () => buyFarm("cornFarm"));
+        document.getElementById("btnBuyFertilizer").addEventListener("click", buyFertilizer);
+
+        // Stein-Spiel
+        document.getElementById("stoneBlock").addEventListener("click", mineStoneBlock);
+        document.getElementById("btnUpgradeStoneDouble").addEventListener("click", () => startStoneResearch("doubleStone"));
+        document.getElementById("btnUpgradeStoneFaster").addEventListener("click", () => startStoneResearch("fasterStoneRespawn"));
+
+        // Stein -> Baustoff
+        document.getElementById("btnTradeStone100").addEventListener("click", () => tradeStoneForBaustoff(100));
+        document.getElementById("btnTradeStone500").addEventListener("click", () => tradeStoneForBaustoff(500));
+        document.getElementById("btnTradeStone1000").addEventListener("click", () => tradeStoneForBaustoff(1000));
+
+        // Stein-Shop
+        document.getElementById("btnBuyExcavator").addEventListener("click", buyExcavator);
+        document.getElementById("btnBuyStonePicker").addEventListener("click", buyStonePicker);
+        document.getElementById("btnBuyStoneMachine").addEventListener("click", buyStoneMachine);
+
+        // Laden & Autosave
+        loadGame();
+        setInterval(saveGame, 5000);
+      });
+    })();
+  </script>
+</body>
+</html>
